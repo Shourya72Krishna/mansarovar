@@ -112,10 +112,6 @@ export default function Sidebar() {
           className={`p-2 rounded-lg transition-colors ${activePage === 'dashboard' ? 'text-blue-300 bg-blue-400/10' : 'text-white/40 hover:text-white/70 hover:bg-white/5'}`}>
           <Home size={18} />
         </button>
-        <button onClick={handleBack} disabled={!canGoBack} title="Back"
-          className="p-2 rounded-lg transition-colors text-white/40 hover:text-white/70 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed">
-          <ArrowLeft size={18} />
-        </button>
         {navItems.map(item => (
           <button key={item.id} onClick={() => setActivePage(item.id)} title={item.label}
             className={`p-2 rounded-lg transition-colors ${activePage === item.id ? 'text-gold-400 bg-gold-400/10' : 'text-white/40 hover:text-white/70 hover:bg-white/5'}`}>
@@ -163,19 +159,6 @@ export default function Sidebar() {
             }}
           >
             <Home size={13} /> Home
-          </button>
-          <button
-            onClick={handleBack}
-            disabled={!canGoBack}
-            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-            style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.06)',
-              color: 'rgba(232,230,240,0.5)',
-            }}
-            title="Go back"
-          >
-            <ArrowLeft size={13} /> Back
           </button>
         </div>
 
