@@ -255,11 +255,17 @@ export function SettingsPage() {
 // ─── Analytics Page ───────────────────────────────────────────────────────────
 
 export function AnalyticsPage() {
-  const { workspaces, subjects, topics, pdfs, fetchPdfs } = useStore()
+  const { workspaces, subjects, topics, pdfs, fetchPdfs, fetchSubjects } = useStore()
 
-  // The global pdfs store only fills up as you visit individual subjects —
-  // fetch everything here so the count reflects the whole account.
-  useEffect(() => { fetchPdfs() }, [])
+  // Subjects (and the topicCount/pdfCount aggregates they carry) only fill in
+  // as you visit individual workspaces, so counts here would be wrong until
+  // every workspace had been opened at least once. Fetch everything up front
+  // instead, and compute totals from those aggregates rather than the
+  // separate topics/pdfs arrays, which only ever fill in per-subject.
+  useEffect(() => { fetchSubjects(); fetchPdfs() }, [])
+
+  const activeSubjects = subjects.filter(s => !s.archived)
+  const topicTotal = activeSubjects.reduce((sum, s) => sum + (s.topicCount || 0), 0)
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
@@ -273,9 +279,9 @@ export function AnalyticsPage() {
       <div className="grid grid-cols-4 gap-4 mb-8">
         {[
           { label: 'Workspaces', value: workspaces.filter(w => !w.archived).length, color: '#7c3aed' },
-          { label: 'Subjects',   value: subjects.filter(s => !s.archived).length,   color: '#2563eb' },
-          { label: 'Topics',     value: topics.length,                               color: '#0d9488' },
-          { label: 'PDFs',       value: pdfs.length,                                 color: '#d97706' },
+          { label: 'Subjects',   value: activeSubjects.length,                      color: '#2563eb' },
+          { label: 'Topics',     value: topicTotal,                                 color: '#0d9488' },
+          { label: 'PDFs',       value: pdfs.length,                                color: '#d97706' },
         ].map(s => (
           <div key={s.label} className="glass-card p-4">
             <div className="text-2xl font-mono font-semibold mb-1" style={{ color: s.color }}>{s.value}</div>
@@ -292,13 +298,13 @@ export function AnalyticsPage() {
           <div className="space-y-3">
             {workspaces.filter(w => !w.archived).map(ws => {
               const wsSubs = subjects.filter(s => s.workspaceId === ws.id && !s.archived)
-              const wsTopics = topics.filter(t => wsSubs.some(s => s.id === t.subjectId))
+              const wsTopicCount = wsSubs.reduce((sum, s) => sum + (s.topicCount || 0), 0)
               return (
                 <div key={ws.id} className="flex items-center gap-3 py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                   <span className="text-lg">{ws.icon}</span>
                   <span className="flex-1 text-sm" style={{ color: 'rgba(232,230,240,0.7)' }}>{ws.name}</span>
                   <span className="text-xs px-2 py-0.5 rounded" style={{ background: 'rgba(37,99,235,0.1)', color: '#60a5fa' }}>{wsSubs.length} subjects</span>
-                  <span className="text-xs px-2 py-0.5 rounded" style={{ background: 'rgba(13,148,136,0.1)', color: '#34d399' }}>{wsTopics.length} topics</span>
+                  <span className="text-xs px-2 py-0.5 rounded" style={{ background: 'rgba(13,148,136,0.1)', color: '#34d399' }}>{wsTopicCount} topics</span>
                 </div>
               )
             })}

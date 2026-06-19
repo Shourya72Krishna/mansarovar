@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Toaster } from 'react-hot-toast'
+import logoImg from '@/assets/logo.png'
 import CosmicBackground from '@/components/shared/CosmicBackground'
 import SplashScreen from '@/components/shared/SplashScreen'
 import Sidebar from '@/components/layout/Sidebar'
@@ -17,7 +18,20 @@ import { appConfig } from '@/config/appConfig'
 import { motion, AnimatePresence } from 'framer-motion'
 
 function AppContent() {
-  const { activePage } = useStore()
+  const { activePage, setActivePage } = useStore()
+
+  // Listen for the browser back/forward button and restore the page it stored.
+  useEffect(() => {
+    // Seed the current entry so the very first back press works correctly.
+    window.history.replaceState({ page: activePage }, '', window.location.pathname)
+
+    const onPop = (e: PopStateEvent) => {
+      const page = e.state?.page
+      if (page) setActivePage(page)
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
 
   const pageMap: Record<string, JSX.Element> = {
     dashboard: <Dashboard />,
@@ -129,7 +143,7 @@ export default function App() {
       <div className="relative z-10 min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 rounded-xl overflow-hidden animate-float">
-            <img src="/src/assets/logo.png" alt="logo" className="w-full h-full object-cover" />
+            <img src={logoImg} alt="logo" className="w-full h-full object-cover" />
           </div>
           <p className="text-sm" style={{ color: 'rgba(232,230,240,0.4)' }}>Loading…</p>
         </div>

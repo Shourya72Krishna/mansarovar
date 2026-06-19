@@ -132,7 +132,15 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   setUser: (user) => set({ user }),
-  setActivePage: (page) => set({ activePage: page }),
+  setActivePage: (page) => {
+    const current = get().activePage
+    if (page === current) return
+    // Push a real browser history entry so Chrome's back button navigates
+    // within the app instead of exiting it. We store the target page name
+    // in the state object so popstate can restore it.
+    window.history.pushState({ page }, '', window.location.pathname)
+    set({ activePage: page })
+  },
   setActiveWorkspace: (id) => set({ activeWorkspaceId: id, activeSubjectId: null, activeTopicId: null }),
   setActiveSubject: (id) => set({ activeSubjectId: id, activeTopicId: null }),
   setActiveTopic: async (id) => {

@@ -164,6 +164,8 @@ function Toolbar({ editor }: { editor: Editor }) {
       <ToolbarButton onClick={addImage} title="Insert Image"><ImageIcon size={14} /></ToolbarButton>
       <ToolbarButton onClick={insertTable} title="Insert Table"><TableIcon size={14} /></ToolbarButton>
 
+      {/* Table editing — only shows while the cursor is inside a table, since
+          these commands (add/delete row or column) only make sense there. */}
       {editor.isActive('table') && (
         <>
           <Divider />
@@ -191,7 +193,6 @@ function Toolbar({ editor }: { editor: Editor }) {
 function exitTableBelow(editor: Editor) {
   const { state } = editor
   const { $anchor } = state.selection
-  // Find the position right after the table node containing the cursor.
   for (let depth = $anchor.depth; depth > 0; depth--) {
     const node = $anchor.node(depth)
     if (node.type.name === 'table') {
@@ -234,6 +235,8 @@ export default function RichEditor({ content, onChange, placeholder = 'Begin wri
         const { $anchor } = state.selection
         for (let depth = $anchor.depth; depth > 0; depth--) {
           if ($anchor.node(depth).type.name === 'table') {
+            // Only intercept if we're already in the table's last row —
+            // otherwise let normal cell-to-cell navigation happen.
             const tableNode = $anchor.node(depth)
             const rowNode = $anchor.node(depth + 1)
             const lastRow = tableNode.lastChild
