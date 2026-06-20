@@ -428,7 +428,7 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="space-y-1.5">
-                {recentActivity.slice(0, 7).map(a => (
+                {recentActivity.filter(a => a.resourceName && a.resourceName !== 'Untitled').slice(0, 7).map(a => (
                   <div key={a.id} className="glass-card-hover px-3 py-2.5 flex items-center gap-3 cursor-pointer"
                     onClick={() => handleTopicClick(a)}>
                     <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"

@@ -10,7 +10,11 @@ import { motion } from 'framer-motion'
 // ─── Recent Page ──────────────────────────────────────────────────────────────
 
 export function RecentPage() {
-  const { recentActivity, topics, setActiveTopic, setActiveSubject, setActivePage } = useStore()
+  const { recentActivity: rawActivity, topics, setActiveTopic, setActiveSubject, setActivePage } = useStore()
+
+  // Filter out entries pointing to deleted topics/PDFs (orphaned activity_log
+  // rows show up with no resource name otherwise, displayed as "Untitled").
+  const recentActivity = rawActivity.filter(a => a.resourceName && a.resourceName !== 'Untitled')
 
   const grouped = recentActivity.reduce((acc, a) => {
     const date = format(new Date(a.timestamp), 'yyyy-MM-dd')

@@ -24,9 +24,7 @@ export default function Sidebar() {
     fetchSubjects,
   } = useStore()
 
-  const [expandedWs, setExpandedWs] = useState<Set<string>>(new Set())
   const [showNewWsModal, setShowNewWsModal] = useState(false)
-  const [renamingWsId, setRenamingWsId] = useState<string | null>(null)
   const [pageHistory, setPageHistory] = useState<string[]>([])
 
   useEffect(() => {
@@ -45,18 +43,8 @@ export default function Sidebar() {
   }
 
   const canGoBack = pageHistory.length >= 2
-  const [renameWsVal, setRenameWsVal] = useState('')
-
-  const handleRenameWs = async (id: string) => {
-    if (!renameWsVal.trim()) { setRenamingWsId(null); return }
-    await updateWorkspace(id, { name: renameWsVal.trim() })
-    setRenamingWsId(null)
-  }
-  const [showNewSubModal, setShowNewSubModal] = useState(false)
   const [newWsName, setNewWsName] = useState('')
   const [newWsIcon, setNewWsIcon] = useState('📚')
-  const [newSubName, setNewSubName] = useState('')
-  const [newSubIcon, setNewSubIcon] = useState('📖')
 
   // Fetch ALL subjects on mount so counts are correct from the start
   useEffect(() => {
@@ -73,14 +61,6 @@ export default function Sidebar() {
 
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN'
 
-  const toggleWs = (id: string) => {
-    setExpandedWs(prev => {
-      const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
-      return next
-    })
-  }
-
   const navItems = [
     { id: 'search',    icon: Search,          label: 'Search'    },
     { id: 'recent',    icon: Clock,           label: 'Recent'    },
@@ -92,13 +72,6 @@ export default function Sidebar() {
     await addWorkspace({ name: newWsName.trim(), icon: newWsIcon, color: '#7c3aed' })
     setNewWsName('')
     setShowNewWsModal(false)
-  }
-
-  const handleCreateSub = async () => {
-    if (!newSubName.trim() || !activeWorkspaceId) return
-    await addSubject({ workspaceId: activeWorkspaceId, name: newSubName.trim(), icon: newSubIcon })
-    setNewSubName('')
-    setShowNewSubModal(false)
   }
 
   if (sidebarCollapsed) {
@@ -173,103 +146,7 @@ export default function Sidebar() {
           ))}
         </div>
 
-        <div style={{ height: '1px', background: 'rgba(255,255,255,0.05)', margin: '0 12px 12px' }} />
-
-        {/* Workspaces */}
-        <div className="px-3 flex-1">
-          <div className="flex items-center justify-between px-2 mb-2">
-            <span className="text-xs font-medium uppercase tracking-widest" style={{ color: 'rgba(232,230,240,0.3)' }}>Workspaces</span>
-            <button onClick={() => setShowNewWsModal(true)}
-              className="flex items-center justify-center w-6 h-6 rounded transition-all hover:scale-110"
-              style={{ background: 'rgba(147,197,253,0.15)', border: '1px solid rgba(147,197,253,0.3)', color: '#93c5fd' }}
-              title="New Workspace">
-              <Plus size={12} />
-            </button>
-          </div>
-
-          <div className="space-y-0.5">
-            {workspaces.filter(w => !w.archived).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)).map(ws => {
-              const wsSubjects = subjects.filter(s => s.workspaceId === ws.id && !s.archived)
-              const isExpanded = expandedWs.has(ws.id)
-              const isActive = activeWorkspaceId === ws.id
-
-              return (
-                <div key={ws.id}>
-                  <div
-                    onClick={() => { toggleWs(ws.id); setActiveWorkspace(ws.id); setActivePage('workspace') }}
-                    className={`sidebar-item w-full cursor-pointer group ${isActive ? 'active' : ''}`}
-                  >
-                    <span className="text-base leading-none shrink-0">{ws.icon || '📁'}</span>
-                    {renamingWsId === ws.id ? (
-                      <div className="flex items-center gap-1 flex-1" onClick={e => e.stopPropagation()}>
-                        <input
-                          value={renameWsVal}
-                          onChange={e => setRenameWsVal(e.target.value)}
-                          onKeyDown={e => { if (e.key === 'Enter') handleRenameWs(ws.id); if (e.key === 'Escape') setRenamingWsId(null) }}
-                          className="text-sm bg-transparent border-b outline-none flex-1 min-w-0"
-                          style={{ color: 'rgba(232,230,240,0.9)', borderColor: 'rgba(147,197,253,0.4)' }}
-                          autoFocus
-                        />
-                        <button onClick={e => { e.stopPropagation(); handleRenameWs(ws.id) }} className="text-emerald-400 hover:text-emerald-300 shrink-0"><Check size={11} /></button>
-                        <button onClick={e => { e.stopPropagation(); setRenamingWsId(null) }} className="text-red-400 hover:text-red-300 shrink-0"><X size={11} /></button>
-                      </div>
-                    ) : (
-                      <span className="flex-1 text-sm">{ws.name}</span>
-                    )}
-                    {ws.pinned && <Star size={11} className="text-gold-500/60 shrink-0" />}
-                    {renamingWsId !== ws.id && (
-                      <button
-                        onClick={e => { e.stopPropagation(); setRenamingWsId(ws.id); setRenameWsVal(ws.name) }}
-                        className="opacity-0 group-hover:opacity-60 hover:!opacity-100 shrink-0 transition-opacity"
-                        style={{ color: 'rgba(232,230,240,0.5)' }}
-                        title="Rename workspace"
-                      >
-                        <Edit2 size={10} />
-                      </button>
-                    )}
-                    <span className="text-xs shrink-0" style={{ color: 'rgba(232,230,240,0.3)' }}>{wsSubjects.length}</span>
-                    {isExpanded ? <ChevronDown size={13} className="shrink-0" /> : <ChevronRight size={13} className="shrink-0" />}
-                  </div>
-
-                  <AnimatePresence>
-                    {isExpanded && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.18 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="ml-4 mt-0.5 space-y-0.5 pb-1">
-                          {wsSubjects.map(sub => (
-                            <div
-                              key={sub.id}
-                              onClick={() => { setActiveSubject(sub.id); setActivePage('subject') }}
-                              className={`topic-item ${activeSubjectId === sub.id ? 'active' : ''}`}
-                            >
-                              <span className="text-xs">{sub.icon || '📖'}</span>
-                              <span className="flex-1 truncate">{sub.name}</span>
-                              {sub.pinned && <Star size={10} className="text-gold-500/50 shrink-0" />}
-                              <span className="text-xs" style={{ color: 'rgba(232,230,240,0.25)' }}>{sub.topicCount}</span>
-                            </div>
-                          ))}
-                          <div
-                            onClick={() => { setActiveWorkspace(ws.id); setShowNewSubModal(true) }}
-                            className="topic-item"
-                            style={{ color: '#93c5fd', opacity: 0.8 }}
-                          >
-                            <Plus size={12} />
-                            <span className="text-xs">Add Subject</span>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              )
-            })}
-          </div>
-        </div>
+        <div className="flex-1" />
 
         {/* Bottom nav */}
         <div style={{ height: '1px', background: 'rgba(255,255,255,0.05)', margin: '12px' }} />
@@ -300,6 +177,16 @@ export default function Sidebar() {
             <Settings size={16} />
             <span>Settings</span>
           </button>
+
+          {/* Devanagari footer line */}
+          <div className="text-center pt-2 pb-1">
+            <span className="font-cinzel text-xs tracking-wide" style={{
+              color: 'rgba(232,230,240,0.25)',
+              letterSpacing: '0.05em',
+            }}>
+              श्रीकृष्णार्पणमस्तु
+            </span>
+          </div>
 
           {/* User */}
           <div className="flex items-center gap-3 px-3 py-2 mt-1 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)' }}>
@@ -357,32 +244,6 @@ export default function Sidebar() {
         </div>
       </Modal>
 
-      {/* New Subject Modal */}
-      <Modal open={showNewSubModal} onClose={() => setShowNewSubModal(false)} title="New Subject">
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm mb-1.5" style={{ color: 'rgba(232,230,240,0.6)' }}>Icon</label>
-            <div className="flex gap-2 flex-wrap">
-              {['📖','🧠','🔬','💻','🌐','📊','🧪','⚡','🎨','🌿'].map(icon => (
-                <button key={icon} onClick={() => setNewSubIcon(icon)}
-                  className={`w-10 h-10 rounded-lg text-xl flex items-center justify-center transition-all ${newSubIcon === icon ? 'bg-gold-500/20 ring-1 ring-gold-400' : 'hover:bg-white/5'}`}>
-                  {icon}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-1.5" style={{ color: 'rgba(232,230,240,0.6)' }}>Name</label>
-            <input value={newSubName} onChange={e => setNewSubName(e.target.value)}
-              className="cosmic-input" placeholder="e.g. DBMS, Machine Learning..."
-              onKeyDown={e => e.key === 'Enter' && handleCreateSub()} autoFocus />
-          </div>
-          <div className="flex gap-3 justify-end pt-1">
-            <button onClick={() => setShowNewSubModal(false)} className="px-4 py-2 text-sm rounded-lg hover:bg-white/5 transition-colors" style={{ color: 'rgba(232,230,240,0.5)' }}>Cancel</button>
-            <button onClick={handleCreateSub} className="gold-btn text-sm px-5 py-2">Create</button>
-          </div>
-        </div>
-      </Modal>
-    </>
+      </>
   )
 }

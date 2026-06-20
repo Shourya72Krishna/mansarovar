@@ -48,6 +48,7 @@ async def get_activity(limit: int = Query(20, le=100), user: dict = Depends(get_
            LEFT JOIN subjects s ON s.id = COALESCE(t.subject_id, p.subject_id, m.subject_id)
            LEFT JOIN workspaces w ON w.id = s.workspace_id
            WHERE a.user_id = $1
+             AND COALESCE(t.name, p.name, m.name) IS NOT NULL
            ORDER BY a.created_at DESC LIMIT $2""",
         str(user["id"]), limit
     )
