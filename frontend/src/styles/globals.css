@@ -413,6 +413,11 @@
   animation: float 6s ease-in-out infinite;
 }
 
+.animate-shimmer-slow {
+  background-size: 200% auto;
+  animation: shimmer 5s linear infinite;
+}
+
 /* Sacred geometry overlay */
 .sacred-geometry {
   position: absolute;

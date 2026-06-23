@@ -178,12 +178,25 @@ export default function Sidebar() {
             <span>Settings</span>
           </button>
 
-          {/* Devanagari footer line */}
-          <div className="text-center pt-2 pb-1">
-            <span className="font-cinzel text-xs tracking-wide" style={{
-              color: 'rgba(232,230,240,0.25)',
-              letterSpacing: '0.05em',
-            }}>
+          {/* Devanagari footer line — a quiet, divine mark */}
+          <div className="text-center pt-3 pb-2 px-2 select-none">
+            <div className="flex items-center justify-center gap-2 mb-1.5 opacity-40">
+              <div style={{ width: 18, height: 1, background: 'linear-gradient(90deg, transparent, rgba(251,191,36,0.5))' }} />
+              <span className="text-[9px]" style={{ color: '#fbbf24' }}>✦</span>
+              <div style={{ width: 18, height: 1, background: 'linear-gradient(90deg, rgba(251,191,36,0.5), transparent)' }} />
+            </div>
+            <span
+              className="animate-shimmer-slow text-sm font-medium inline-block"
+              style={{
+                fontFamily: '"Noto Sans Devanagari", "Tiro Devanagari Sanskrit", serif',
+                backgroundImage: 'linear-gradient(90deg, #92400e 0%, #fbbf24 25%, #fef3c7 50%, #fbbf24 75%, #92400e 100%)',
+                WebkitBackgroundClip: 'text',
+                backgroundClip: 'text',
+                color: 'transparent',
+                letterSpacing: '0.04em',
+                filter: 'drop-shadow(0 0 6px rgba(251,191,36,0.25))',
+              }}
+            >
               श्रीकृष्णार्पणमस्तु
             </span>
           </div>
