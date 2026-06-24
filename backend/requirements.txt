@@ -26,3 +26,4 @@ python-multipart==0.0.12
 # Utils
 slowapi==0.1.9
 loguru==0.7.2
+aiohttp==3.9.5
