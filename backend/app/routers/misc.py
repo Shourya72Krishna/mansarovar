@@ -83,6 +83,86 @@ async def drive_disconnect(user: dict = Depends(get_current_user), conn: asyncpg
     )
     return success(None, "Drive disconnected")
 
+@drive_router.get("/connect")
+async def drive_connect(
+    token: str,
+    conn: asyncpg.Connection = Depends(get_conn),
+):
+    """Initiate Google OAuth flow for Drive connection."""
+    from app.middleware.auth import decode_token
+    import urllib.parse
+    
+    try:
+        user_id = decode_token(token)
+    except:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    
+    # Build Google OAuth URL
+    params = {
+        "client_id": settings.google_client_id,
+        "redirect_uri": f"{settings.backend_url}/api/drive/connect/callback",
+        "response_type": "code",
+        "scope": settings.google_drive_scope,
+        "state": token,  # Pass JWT token as state for verification
+        "access_type": "offline",
+        "prompt": "consent",
+    }
+    
+    google_auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{urllib.parse.urlencode(params)}"
+    return {"auth_url": google_auth_url}
+
+
+@drive_router.get("/connect/callback")
+async def drive_connect_callback(
+    code: str,
+    state: str = None,
+    conn: asyncpg.Connection = Depends(get_conn),
+):
+    """Google OAuth callback for Drive connection."""
+    from app.middleware.auth import decode_token
+    import httpx
+    from fastapi.responses import RedirectResponse
+    
+    if not state or not code:
+        return RedirectResponse(f"{settings.frontend_url}/?error=drive_auth_failed")
+    
+    try:
+        user_id = decode_token(state)
+    except:
+        return RedirectResponse(f"{settings.frontend_url}/?error=invalid_state")
+    
+    # Exchange code for tokens
+    async with httpx.AsyncClient() as client:
+        token_resp = await client.post(
+            "https://oauth2.googleapis.com/token",
+            data={
+                "code": code,
+                "client_id": settings.google_client_id,
+                "client_secret": settings.google_client_secret,
+                "redirect_uri": f"{settings.backend_url}/api/drive/connect/callback",
+                "grant_type": "authorization_code",
+            }
+        )
+        
+        if token_resp.status_code != 200:
+            return RedirectResponse(f"{settings.frontend_url}/?error=token_exchange_failed")
+        
+        tokens = token_resp.json()
+    
+    # Save tokens to user
+    await conn.execute(
+        """UPDATE users 
+           SET drive_access_token = $1,
+               drive_refresh_token = COALESCE($2, drive_refresh_token),
+               drive_connected = TRUE
+           WHERE id = $3""",
+        tokens.get("access_token"),
+        tokens.get("refresh_token"),
+        user_id,
+    )
+    
+    return RedirectResponse(f"{settings.frontend_url}?drive=connected")
+
 
 # ════════════════════ ADMIN ════════════════════
 admin_router = APIRouter(prefix="/admin", tags=["admin"])
