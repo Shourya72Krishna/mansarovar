@@ -108,8 +108,9 @@ async def drive_connect(
         "prompt": "consent",
     }
     
+    from fastapi.responses import RedirectResponse
     google_auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{urllib.parse.urlencode(params)}"
-    return {"auth_url": google_auth_url}
+    return RedirectResponse(google_auth_url)
 
 
 @drive_router.get("/connect/callback")
