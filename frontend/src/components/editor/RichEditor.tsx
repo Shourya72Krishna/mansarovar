@@ -64,10 +64,25 @@ function Toolbar({ editor }: { editor: Editor }) {
     const url = window.prompt('Enter URL:')
     if (url) editor.chain().focus().setLink({ href: url }).run()
   }
+  
   const addImage = () => {
-    const url = window.prompt('Enter image URL:')
-    if (url) editor.chain().focus().setImage({ src: url }).run()
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*'
+    input.onchange = (e: any) => {
+      const file = e.target.files?.[0]
+      if (!file) return
+      
+      const reader = new FileReader()
+      reader.onload = (event: any) => {
+        const imageUrl = event.target.result
+        editor.chain().focus().setImage({ src: imageUrl }).run()
+      }
+      reader.readAsDataURL(file)
+    }
+    input.click()
   }
+  
   const insertTable = () => {
     editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
   }
