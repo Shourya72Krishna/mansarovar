@@ -61,7 +61,7 @@ export default function TopicPage() {
         console.error('Auto-save failed:', e)
         setSaveStatus('unsaved')
       }
-    }, 1500)
+    }, 10000)
   }, [topic, updateTopic])
 
   // Go back to previous topic in history, or to subject page
