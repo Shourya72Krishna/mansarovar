@@ -116,6 +116,58 @@ async def upload_file_to_drive(
     )
 
 
+GOOGLE_DOC_MIME = "application/vnd.google-apps.document"
+
+
+async def create_google_doc(
+    user:      dict,
+    folder_id: str,
+    title:     str,
+    html:      str,
+) -> Tuple[str, str]:
+    """Create a native Google Doc from HTML content. Drive converts the HTML
+    into Doc formatting on upload. Returns (file_id, view_url)."""
+    service = _get_drive_service(user)
+
+    media = MediaIoBaseUpload(
+        io.BytesIO(html.encode("utf-8")),
+        mimetype="text/html",
+        resumable=False,
+    )
+
+    file = service.files().create(
+        body={
+            "name": title,
+            "mimeType": GOOGLE_DOC_MIME,
+            "parents": [folder_id],
+        },
+        media_body=media,
+        fields="id, webViewLink",
+    ).execute()
+
+    return file["id"], file.get("webViewLink", "")
+
+
+async def update_google_doc(user: dict, file_id: str, html: str) -> None:
+    """Replace a Google Doc's content by re-uploading fresh HTML.
+    Drive re-converts and swaps the whole body — simplest way to mirror
+    an HTML source of truth without touching the Docs batchUpdate API."""
+    service = _get_drive_service(user)
+
+    media = MediaIoBaseUpload(
+        io.BytesIO(html.encode("utf-8")),
+        mimetype="text/html",
+        resumable=False,
+    )
+
+    service.files().update(fileId=file_id, media_body=media).execute()
+
+
+async def rename_google_doc(user: dict, file_id: str, title: str) -> None:
+    service = _get_drive_service(user)
+    service.files().update(fileId=file_id, body={"name": title}).execute()
+
+
 async def delete_file_from_drive(user: dict, drive_file_id: str):
     try:
         service = _get_drive_service(user)

@@ -4,7 +4,7 @@ from app.config import settings
 
 async def main():
     conn = await asyncpg.connect(dsn=settings.database_url.replace("postgresql+asyncpg://", "postgresql://"))
-    sql = open(os.path.join(os.path.dirname(__file__), "schema.sql")).read()
+    sql = open(os.path.join(os.path.dirname(__file__), "schema.sql"), encoding="utf-8").read()
     await conn.execute(sql)
     print("✅ Migration complete")
     await conn.close()

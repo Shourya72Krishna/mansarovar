@@ -4,6 +4,7 @@ import asyncpg
 from app.db.pool import get_conn
 from app.middleware.auth import get_current_user, check_ownership
 from app.services.audit import audit, log_activity
+from app.services.drive_sync import schedule_topic_sync
 from app.schemas import TopicCreate, TopicUpdate
 from app.utils import success, row_to_dict, rows_to_list
 
@@ -72,6 +73,7 @@ async def create_topic(
     await audit(conn, str(user["id"]), user["name"], "TOPIC_CREATE",
                 f'Created topic "{body.name}"', request)
     await log_activity(conn, str(user["id"]), "topic", str(row["id"]), "create")
+    schedule_topic_sync(str(row["id"]), str(user["id"]))
 
     result = row_to_dict(row)
     result["version_count"] = 0
@@ -143,6 +145,9 @@ async def update_topic(
     )
 
     await log_activity(conn, str(user["id"]), "topic", topic_id, "edit")
+
+    if "content" in updates:
+        schedule_topic_sync(topic_id, str(user["id"]))
 
     result = row_to_dict(row)
     vc = await conn.fetchval("SELECT COUNT(*) FROM topic_versions WHERE topic_id = $1", topic_id)

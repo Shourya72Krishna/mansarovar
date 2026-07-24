@@ -9,9 +9,20 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";    -- fast LIKE / trigram search
 CREATE EXTENSION IF NOT EXISTS "unaccent";   -- accent-insensitive search
 
 -- ── Enum Types ──────────────────────────────────────────────────
-CREATE TYPE user_role   AS ENUM ('SUPER_ADMIN', 'ADMIN', 'USER');
-CREATE TYPE user_status AS ENUM ('active', 'suspended');
-CREATE TYPE media_type  AS ENUM ('image', 'video', 'attachment');
+DO $$ BEGIN
+  CREATE TYPE user_role AS ENUM ('SUPER_ADMIN', 'ADMIN', 'USER');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE user_status AS ENUM ('active', 'suspended');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE media_type AS ENUM ('image', 'video', 'attachment');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- ── Users ───────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS users (
@@ -84,6 +95,12 @@ CREATE TABLE IF NOT EXISTS topics (
   created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
   updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
+
+-- ── Drive Doc mirror columns (safe to re-run on existing DBs) ─────
+ALTER TABLE topics ADD COLUMN IF NOT EXISTS drive_file_id    TEXT;
+ALTER TABLE topics ADD COLUMN IF NOT EXISTS drive_view_url   TEXT;
+ALTER TABLE topics ADD COLUMN IF NOT EXISTS drive_folder_id  TEXT;
+ALTER TABLE topics ADD COLUMN IF NOT EXISTS drive_synced_at  TIMESTAMPTZ;
 
 -- ── Topic Versions ───────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS topic_versions (
@@ -262,3 +279,20 @@ BEGIN
     );
   END LOOP;
 END $$;
+
+-- Override: don't bump updated_at for Drive-mirror-only writes
+-- (drive_file_id / drive_view_url / drive_folder_id / drive_synced_at)
+DROP TRIGGER IF EXISTS trg_updated_at ON topics;
+CREATE TRIGGER trg_updated_at
+BEFORE UPDATE ON topics
+FOR EACH ROW
+WHEN (
+  NEW.name            IS DISTINCT FROM OLD.name OR
+  NEW.content         IS DISTINCT FROM OLD.content OR
+  NEW.pinned          IS DISTINCT FROM OLD.pinned OR
+  NEW.archived        IS DISTINCT FROM OLD.archived OR
+  NEW.sort_order      IS DISTINCT FROM OLD.sort_order OR
+  NEW.tags            IS DISTINCT FROM OLD.tags OR
+  NEW.parent_id       IS DISTINCT FROM OLD.parent_id
+)
+EXECUTE FUNCTION update_updated_at();
