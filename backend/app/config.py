@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     jwt_expire_days: int = 7
     google_client_id:        str = ""
     google_client_secret:    str = ""
-    google_callback_url:     str = ""
+    google_redirect_uri:     str = ""
     google_drive_scope:      str = ""
     super_admin_email:       str = ""
     rate_limit_max_requests: int = 100
@@ -27,7 +27,7 @@ class Settings(BaseSettings):
 
     @property
     def google_redirect_uri(self) -> str:
-        return self.google_callback_url
+        return self.google_redirect_uri
 
     @property
     def rate_limit_per_minute(self) -> int:
