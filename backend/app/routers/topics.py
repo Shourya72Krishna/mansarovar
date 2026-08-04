@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import Response
 from typing import Optional
 import asyncpg
 from app.db.pool import get_conn
 from app.middleware.auth import get_current_user, check_ownership
 from app.services.audit import audit, log_activity
-from app.services.drive_sync import schedule_topic_sync
+from app.services.drive_sync import schedule_topic_sync, ensure_topic_synced
+from app.services.drive import export_google_doc_as_pdf
 from app.schemas import TopicCreate, TopicUpdate
 from app.utils import success, row_to_dict, rows_to_list
 
@@ -100,6 +102,42 @@ async def get_topic(
 
     await log_activity(conn, str(user["id"]), "topic", topic_id, "view")
     return success(row_to_dict(row))
+
+
+@router.get("/{topic_id}/export-pdf")
+async def export_topic_pdf(
+    topic_id: str,
+    user: dict = Depends(get_current_user),
+    conn: asyncpg.Connection = Depends(get_conn),
+):
+    await check_ownership("topics", topic_id, user, conn)
+
+    topic = await conn.fetchrow(
+        "SELECT name, drive_file_id FROM topics WHERE id = $1", topic_id
+    )
+    if not topic:
+        raise HTTPException(404, "Topic not found")
+
+    file_id = topic["drive_file_id"]
+    if not file_id:
+        # Not mirrored yet (e.g. a brand-new note, or the 45s debounce
+        # hasn't fired) — create the Doc right now instead of making the
+        # user wait or retry.
+        file_id = await ensure_topic_synced(topic_id, str(user["id"]))
+        if not file_id:
+            raise HTTPException(
+                400,
+                "Connect Google Drive in Settings before downloading notes as PDF."
+            )
+
+    pdf_bytes = await export_google_doc_as_pdf(user, file_id)
+
+    safe_name = (topic["name"] or "note").replace('"', "'")
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{safe_name}.pdf"'},
+    )
 
 
 @router.patch("/{topic_id}")

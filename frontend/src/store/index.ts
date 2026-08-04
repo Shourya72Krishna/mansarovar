@@ -106,6 +106,8 @@ const mapTopic = (d: any): Topic => ({
   createdAt:      d.created_at,
   updatedAt:      d.updated_at,
   versionCount:   parseInt(d.version_count ?? '0'),
+  driveFileId:    d.drive_file_id ?? undefined,
+  driveViewUrl:   d.drive_view_url ?? undefined,
   children:       [],  // always empty — we use flat list
 })
 

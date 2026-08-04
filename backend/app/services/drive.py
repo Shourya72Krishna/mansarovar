@@ -168,6 +168,12 @@ async def rename_google_doc(user: dict, file_id: str, title: str) -> None:
     service.files().update(fileId=file_id, body={"name": title}).execute()
 
 
+async def export_google_doc_as_pdf(user: dict, file_id: str) -> bytes:
+    """Export a Google Doc's current content as PDF bytes."""
+    service = _get_drive_service(user)
+    return service.files().export(fileId=file_id, mimeType="application/pdf").execute()
+
+
 async def delete_file_from_drive(user: dict, drive_file_id: str):
     try:
         service = _get_drive_service(user)

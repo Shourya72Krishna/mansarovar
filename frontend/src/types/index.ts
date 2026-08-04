@@ -62,6 +62,8 @@ export interface Topic {
   createdAt: string
   updatedAt: string
   versionCount: number
+  driveFileId?: string
+  driveViewUrl?: string
 }
 
 export interface PDFFile {
