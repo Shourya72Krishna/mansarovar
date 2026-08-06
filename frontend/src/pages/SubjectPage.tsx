@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Star, FileText, Image, Video, Layers, Hash, Pin, Search, Upload, Trash2, X, Edit2, Check } from 'lucide-react'
+import { Plus, Star, FileText, Image, Video, Layers, Hash, Pin, Search, Upload, Trash2, X, Edit2, Check, Download } from 'lucide-react'
 import { useStore } from '@/store'
 import { motion } from 'framer-motion'
+import toast from 'react-hot-toast'
 import Modal from '@/components/shared/Modal'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import { api } from '@/services/api'
@@ -19,8 +20,9 @@ const TABS: { id: TabId; label: string; icon: any }[] = [
   { id: 'all-media', label: 'All Media', icon: Layers   },
 ]
 
-function TopicRow({ topic, depth = 0, onSelect, onRename }: { topic: Topic; depth?: number; onSelect: (id: string) => void; onRename?: (id: string, name: string) => void }) {
+function TopicRow({ topic, depth = 0, onSelect, onRename, onDownloadPdf }: { topic: Topic; depth?: number; onSelect: (id: string) => void; onRename?: (id: string, name: string) => void; onDownloadPdf?: (id: string, name: string) => Promise<void> }) {
   const [expanded, setExpanded] = useState(depth < 1)
+  const [downloading, setDownloading] = useState(false)
   const hasChildren = topic.children && topic.children.length > 0
 
   return (
@@ -53,6 +55,29 @@ function TopicRow({ topic, depth = 0, onSelect, onRename }: { topic: Topic; dept
 
         {topic.pinned && <Pin size={11} className="text-gold-500/60 shrink-0" />}
 
+        {onDownloadPdf && (
+          <button
+            onClick={async e => {
+              e.stopPropagation()
+              if (downloading) return
+              setDownloading(true)
+              try {
+                await onDownloadPdf(topic.id, topic.name)
+              } finally {
+                setDownloading(false)
+              }
+            }}
+            disabled={downloading}
+            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-white/10 shrink-0 disabled:opacity-100"
+            style={{ color: 'rgba(147,197,253,0.6)' }}
+            title="Download as PDF"
+          >
+            {downloading
+              ? <span className="block w-[11px] h-[11px] border border-current border-t-transparent rounded-full animate-spin" />
+              : <Download size={11} />}
+          </button>
+        )}
+
         {onRename && (
           <button
             onClick={e => { e.stopPropagation(); onRename(topic.id, topic.name) }}
@@ -73,7 +98,7 @@ function TopicRow({ topic, depth = 0, onSelect, onRename }: { topic: Topic; dept
       {expanded && hasChildren && (
         <div>
           {topic.children!.map(child => (
-            <TopicRow key={child.id} topic={child} depth={depth + 1} onSelect={onSelect} />
+            <TopicRow key={child.id} topic={child} depth={depth + 1} onSelect={onSelect} onRename={onRename} onDownloadPdf={onDownloadPdf} />
           ))}
         </div>
       )}
@@ -182,6 +207,19 @@ export default function SubjectPage() {
     setActiveSubject(activeSubjectId!)
     setActiveTopic(id)
     setActivePage('topic')
+  }
+
+  const handleDownloadTopicPdf = async (id: string, name: string) => {
+    if (!user?.driveConnected) {
+      toast.error('Connect Google Drive in Settings to download notes as PDF.')
+      return
+    }
+    try {
+      await api.topics.downloadPdf(id, name)
+    } catch (e: any) {
+      console.error('PDF export failed:', e)
+      toast.error(e?.message || 'Could not export this note as PDF.')
+    }
   }
 
   const handlePdfUpload = async () => {
@@ -325,6 +363,7 @@ export default function SubjectPage() {
                     topic={topic}
                     onSelect={handleTopicSelect}
                     onRename={(id, name) => { setRenamingTopicId(id); setRenameTopicValue(name) }}
+                    onDownloadPdf={handleDownloadTopicPdf}
                   />
                 ))}
               </div>

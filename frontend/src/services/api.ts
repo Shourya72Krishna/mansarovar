@@ -95,6 +95,27 @@ export const api = {
     versions: (id: string) => api.get<any[]>(`/topics/${id}/versions`),
     restore:  (id: string, versionId: string) =>
       api.post<any>(`/topics/${id}/versions/${versionId}/restore`),
+    downloadPdf: async (id: string, name: string) => {
+      const token = getToken()
+      const res = await fetch(`${BASE}/topics/${id}/export-pdf`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include',
+      })
+      if (!res.ok) {
+        let message = `HTTP ${res.status}`
+        try { message = (await res.json()).message ?? message } catch { /* not JSON */ }
+        throw new Error(message)
+      }
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = `${name || 'note'}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    },
   },
 
   // ── PDFs ────────────────────────────────────────────────────
